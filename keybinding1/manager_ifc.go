@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2018 - 2022 UnionTech Software Technology Co., Ltd.
+// SPDX-FileCopyrightText: 2018 - 2026 UnionTech Software Technology Co., Ltd.
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -292,14 +292,14 @@ func (m *Manager) ClearShortcutKeystrokes(id string, type0 int32) *dbus.Error {
 	if shortcut == nil {
 		return dbusutil.ToError(ErrShortcutNotFound{id, type0})
 	}
+	m.enableListenDConifigChanged(false)
 	m.shortcutManager.ModifyShortcutKeystrokes(shortcut, nil)
 	err := shortcut.SaveKeystrokes()
+	m.enableListenDConifigChanged(true)
 	if err != nil {
 		return dbusutil.ToError(err)
 	}
-	if shortcut.ShouldEmitSignalChanged() {
-		m.emitShortcutSignal(shortcutSignalChanged, shortcut)
-	}
+	m.emitShortcutSignal(shortcutSignalChanged, shortcut)
 	return nil
 }
 
@@ -468,18 +468,17 @@ func (m *Manager) AddShortcutKeystroke(id string, type0 int32, keystroke string)
 	}
 
 	// 添加所有 keystroke
+	m.enableListenDConifigChanged(false)
 	for _, ksToAdd := range keystrokesToAdd {
 		m.shortcutManager.AddShortcutKeystroke(shortcut, ksToAdd)
 	}
 
 	err = shortcut.SaveKeystrokes()
+	m.enableListenDConifigChanged(true)
 	if err != nil {
 		return dbusutil.ToError(err)
 	}
-	if shortcut.ShouldEmitSignalChanged() {
-		m.emitShortcutSignal(shortcutSignalChanged, shortcut)
-	}
-
+	m.emitShortcutSignal(shortcutSignalChanged, shortcut)
 	return nil
 }
 
@@ -500,14 +499,14 @@ func (m *Manager) DeleteShortcutKeystroke(id string, type0 int32, keystroke stri
 	}
 	logger.Debug("keystroke:", ks.DebugString())
 
+	m.enableListenDConifigChanged(false)
 	m.shortcutManager.DeleteShortcutKeystroke(shortcut, ks)
 	err = shortcut.SaveKeystrokes()
+	m.enableListenDConifigChanged(true)
 	if err != nil {
 		return dbusutil.ToError(err)
 	}
-	if shortcut.ShouldEmitSignalChanged() {
-		m.emitShortcutSignal(shortcutSignalChanged, shortcut)
-	}
+	m.emitShortcutSignal(shortcutSignalChanged, shortcut)
 	return nil
 }
 
