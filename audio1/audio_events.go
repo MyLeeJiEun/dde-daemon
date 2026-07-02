@@ -535,6 +535,10 @@ func (a *Audio) handleSourceAdded(idx uint32) {
 	if source.Name == reduceNoiseSourceName && a.ReduceNoise {
 		logger.Info("set reduceNoise as default source", a.getMasterNameFromVirtualDevice(reduceNoiseSourceName))
 		a.ctx.SetDefaultSource(reduceNoiseSourceName)
+	} else if source.Name == rnnoiseSourceName {
+		// AI noise reduction virtual source; skip port auto-switch
+		// which would reset the default source to the physical mic.
+		return
 	} else if !isPhysicalDevice(source.Name) {
 		// 其他的虚拟通道不做自动切换处理
 		return
@@ -778,6 +782,17 @@ func (a *Audio) writeReduceNoise(write *dbusutil.PropertyWrite) *dbus.Error {
 		return dbusutil.ToError(errors.New("type is not bool"))
 	}
 	a.setReduceNoise(reduce)
+	return nil
+}
+
+// 外部修改AiReduceNoise时触发回调
+func (a *Audio) writeAiReduceNoise(write *dbusutil.PropertyWrite) *dbus.Error {
+	reduce, ok := write.Value.(bool)
+	if !ok {
+		logger.Warning("type is not bool")
+		return dbusutil.ToError(errors.New("type is not bool"))
+	}
+	a.setAiReduceNoise(reduce)
 	return nil
 }
 

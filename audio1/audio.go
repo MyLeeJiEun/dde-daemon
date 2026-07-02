@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"os/exec"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -63,6 +65,8 @@ const (
 	dsgKeyBluezModeDefault        = "bluezModeDefault"
 	dsgKeyMonoEnabled             = "monoEnabled"
 	dsgKeyReduceNoiseEnabled      = "reduceNoiseEnabled" // 降噪配置，保存用户数据
+	dsgKeyAiReduceNoiseEnabled    = "aiReduceNoiseEnabled"
+	rnnoiseSourceName             = "effect_output.rnnoise"
 
 	dsgKeyFirstRun                 = "firstRun"
 	dsgKeyInputVolume              = "inputVolume"
@@ -86,6 +90,7 @@ var (
 	// 保存 pulaudio ,pipewire 相关的服务
 	pulseaudioServices = []string{pulseaudioService, pulseaudioSocket}
 	pipewireServices   = []string{pipewireService, pipewirePulseService, pipewireSocket, pipewirePulseSocket}
+	volumePctRe        = regexp.MustCompile(`(\d+)%`)
 )
 
 const (
@@ -95,7 +100,7 @@ const (
 	AudioStateChanging = false
 )
 
-//go:generate dbusutil-gen -type Audio,Sink,SinkInput,Source,Meter -import github.com/godbus/dbus audio.go sink.go sinkinput.go source.go meter.go
+//go:generate dbusutil-gen -type Audio,Sink,SinkInput,Source,Meter -import github.com/godbus/dbus/v5 audio.go sink.go sinkinput.go source.go meter.go
 //go:generate dbusutil-gen em -type Audio,Sink,SinkInput,Source,Meter
 
 func objectPathSliceEqual(v1, v2 []dbus.ObjectPath) bool {
@@ -151,6 +156,10 @@ type Audio struct {
 
 	ReduceNoise bool `prop:"access:rw"`
 
+	AiReduceNoise bool `prop:"access:rw"`
+	// 开启AI降噪时保存的物理麦克风名称，用于关闭时恢复原始源
+	aiNoiseSourceName string
+
 	defaultPaCfg defaultPaConfig
 
 	// 最大音量
@@ -186,7 +195,6 @@ type Audio struct {
 
 	syncConfig     *dsync.Config
 	sessionSigLoop *dbusutil.SignalLoop
-
 	noRestartPulseAudio bool
 	// 自动端口切换
 	enableAutoSwitchPort bool
@@ -240,6 +248,8 @@ func newAudio(service *dbusutil.Service) *Audio {
 	a.PausePlayer = false
 	a.ReduceNoise = false
 	a.emitPropChangedReduceNoise(a.ReduceNoise)
+	a.AiReduceNoise = false
+	a.emitPropChangedAiReduceNoise(a.AiReduceNoise)
 	a.CurrentAudioServer = a.getCurrentAudioServer()
 	a.headphoneUnplugAutoPause, err = a.audioDConfig.GetValueBool(dsgKeyHeadphoneUnplugAutoPause)
 	if err != nil {
@@ -804,6 +814,10 @@ func (a *Audio) init() error {
 
 	// 更新本地数据
 	a.refresh()
+
+	// After refresh, run AI noise-reduction init with both DConfig and
+	// source list available.
+	a.initAiReduceNoise()
 	logger.Debug("init cards")
 	a.PropsMu.Lock()
 	a.setPropCards(a.cards.string())
@@ -1526,6 +1540,29 @@ func (a *Audio) updateDefaultSource(sourceName string) {
 	a.PropsMu.Unlock()
 
 	logger.Debug("set prop default source:", defaultSourcePath)
+
+	// Sync AiReduceNoise property when PA reports effect_output.rnnoise
+	// as the default source.  At startup initDsgProp may run before PA
+	// is ready, so this callback (fired by PA event loop) is the
+	// reliable path.  Hold PropsMu to avoid racing with D-Bus writes
+	// and DConfig callbacks.
+	a.PropsMu.Lock()
+	if sourceName == rnnoiseSourceName && !a.AiReduceNoise {
+		logger.Infof("sync AiReduceNoise=true from PA default source: %s", sourceName)
+		a.setPropAiReduceNoise(true)
+		a.PropsMu.Unlock()
+		// Also save physical mic name — setPropAiReduceNoise doesn't do this,
+		// and initAiReduceNoise won't re-enter setAiReduceNoise (early return).
+		if a.aiNoiseSourceName == "" {
+			name := a.getDefaultSourceName()
+			if name == rnnoiseSourceName {
+				name = a.recoverPhysicalSourceName()
+			}
+			a.aiNoiseSourceName = name
+		}
+	} else {
+		a.PropsMu.Unlock()
+	}
 }
 
 func (a *Audio) context() *pulse.Context {
@@ -1868,6 +1905,30 @@ func (a *Audio) initDsgProp() error {
 	}
 	getReduceNoiseEnabled()
 
+	getAiReduceNoiseEnabled := func() {
+		aiReduceNoiseEnabled, err := a.audioDConfig.GetValueBool(dsgKeyAiReduceNoiseEnabled)
+		if err != nil {
+			logger.Warningf("aiReduceNoise initDsgProp: DConfig GetValueBool failed: %v", err)
+			paDefault := a.paDefaultSourceIs(rnnoiseSourceName)
+			logger.Infof("aiReduceNoise initDsgProp: paDefaultSourceIs(rnnoise)=%v", paDefault)
+			if paDefault {
+				logger.Info("aiReduceNoise initDsgProp: restoring from PA default source")
+				a.setAiReduceNoise(true)
+			}
+		} else if aiReduceNoiseEnabled {
+			logger.Info("aiReduceNoise initDsgProp: DConfig=true, calling setAiReduceNoise(true)")
+			a.setAiReduceNoise(aiReduceNoiseEnabled)
+		} else if a.paDefaultSourceIs(rnnoiseSourceName) {
+			logger.Info("aiReduceNoise initDsgProp: DConfig=false but PA default is rnnoise; restoring")
+			a.setAiReduceNoise(true)
+		} else {
+			logger.Infof("aiReduceNoise initDsgProp: DConfig=false, PA default not rnnoise, disabled=%v", aiReduceNoiseEnabled)
+		}
+	}
+	// NOTE: do NOT call getAiReduceNoiseEnabled() here — it runs before
+	// refresh() and would get an empty default-source name.  The actual
+	// init is done in initAiReduceNoise() after refresh().
+
 	a.audioDConfig.ConnectValueChanged(func(key string) {
 		switch key {
 		case dsgKeyAutoSwitchPort:
@@ -1884,6 +1945,8 @@ func (a *Audio) initDsgProp() error {
 			getMonoEnabled()
 		case dsgKeyVolumeIncrease:
 			a.handleVolumeIncrease()
+		case dsgKeyAiReduceNoiseEnabled:
+			getAiReduceNoiseEnabled()
 		}
 	})
 
@@ -2008,4 +2071,213 @@ func (a *Audio) isModuleExist(name string) bool {
 		}
 	}
 	return false
+}
+
+func (a *Audio) paDefaultSourceIs(target string) bool {
+	out, err := exec.Command("pactl", "get-default-source").Output()
+	if err != nil {
+		return false
+	}
+	return strings.TrimSpace(string(out)) == target
+}
+
+// recoverPhysicalSourceName recovers the physical microphone source name when
+// the current PulseAudio default source is already effect_output.rnnoise.
+// Priority: 1) rnnoise-toggle state file, 2) pactl source list excluding rnnoise.
+func (a *Audio) recoverPhysicalSourceName() string {
+	// Try rnnoise-toggle's saved original source first.
+	runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
+	if runtimeDir == "" {
+		runtimeDir = "/run/user/" + strconv.Itoa(os.Getuid())
+	}
+	stateFile := runtimeDir + "/rnnoise-toggle-original-source"
+	if data, err := os.ReadFile(stateFile); err == nil {
+		name := strings.TrimSpace(string(data))
+		if name != "" && name != rnnoiseSourceName {
+			return name
+		}
+	}
+
+	// Fallback: scan pactl source list for a non-rnnoise, non-monitor source.
+	out, err := exec.Command("pactl", "list", "sources", "short").Output()
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(out), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 {
+			name := fields[1]
+			if name != rnnoiseSourceName && !strings.Contains(name, ".monitor") {
+				return name
+			}
+		}
+	}
+	return ""
+}
+
+func (a *Audio) setAiReduceNoise(enable bool) error {
+	a.PropsMu.Lock()
+	if a.AiReduceNoise == enable {
+		a.PropsMu.Unlock()
+		return nil
+	}
+	a.PropsMu.Unlock()
+
+	if enable {
+		// Save physical mic name before switching.
+		// When default source is already effect_output.rnnoise (e.g. after
+		// daemon restart with PA persistence), getDefaultSourceName()
+		// returns the rnnoise source itself instead of the physical mic.
+		// Recover the physical mic from rnnoise-toggle's saved state file.
+		a.aiNoiseSourceName = a.getDefaultSourceName()
+		if a.aiNoiseSourceName == rnnoiseSourceName {
+			a.aiNoiseSourceName = a.recoverPhysicalSourceName()
+		}
+		if a.aiNoiseSourceName == "" {
+			logger.Warning("failed to get default source: source is nil")
+		} else {
+			// Read physical mic volume percentage
+			physVol := ""
+			vOut, volErr := exec.Command("pactl", "get-source-volume", a.aiNoiseSourceName).Output()
+			if volErr == nil {
+				m := volumePctRe.FindStringSubmatch(string(vOut))
+				if len(m) >= 2 {
+					physVol = m[1] + "%"
+				}
+			} else {
+				logger.Warning("failed to get source volume:", volErr)
+			}
+
+			// Sync rnnoise source volume BEFORE switching (it pre-exists)
+			// rnnoise source may exist from prior enable cycle
+			if physVol != "" {
+				if volErr := exec.Command("pactl", "set-source-volume", rnnoiseSourceName, physVol).Run(); volErr != nil {
+					logger.Warning("failed to sync rnnoise volume:", volErr)
+				}
+			}
+		}
+
+		cmd := exec.Command("rnnoise-toggle", "-q", "on")
+		err := cmd.Run()
+		if err != nil {
+			// rnnoise-toggle -q on exits 1 when default source is already
+			// effect_output.rnnoise (save_original_source rejects its own
+			// source name).  Verify actual PA state to distinguish a false
+			// negative from a genuine failure.
+			if a.paDefaultSourceIs(rnnoiseSourceName) {
+				logger.Warningf("rnnoise-toggle -q on reported failure "+
+					"but default source is already %s; continuing", rnnoiseSourceName)
+			} else {
+				logger.Warning("failed to enable ai reduce noise:", err)
+				return err
+			}
+		}
+	} else {
+		// Read current rnnoise source volume before disabling
+		curVol := ""
+		vOut, err := exec.Command("pactl", "get-source-volume", rnnoiseSourceName).Output()
+		if err == nil {
+			m := volumePctRe.FindStringSubmatch(string(vOut))
+			if len(m) >= 2 {
+				curVol = m[1] + "%"
+			}
+		} else {
+			logger.Warning("failed to get rnnoise source volume:", err)
+		}
+
+		args := []string{"-q", "off"}
+		if a.aiNoiseSourceName != "" {
+			args = append(args, a.aiNoiseSourceName)
+		}
+		cmd := exec.Command("rnnoise-toggle", args...)
+		err = cmd.Run()
+		if err != nil {
+			// rnnoise-toggle -q off exits 1 even when pactl succeeds,
+			// because info() returns non-zero in quiet mode and triggers
+			// set -e.  Verify actual PA state to distinguish a false
+			// negative from a genuine failure.
+			if !a.paDefaultSourceIs(rnnoiseSourceName) {
+				logger.Warningf("rnnoise-toggle -q off reported failure "+
+					"but default source is no longer %s; continuing", rnnoiseSourceName)
+			} else {
+				logger.Warning("failed to disable ai reduce noise:", err)
+				return err
+			}
+		}
+
+		// After disabling, system restores physical mic to saved config.
+		// Overwrite with rnnoise volume to avoid jump.
+		if curVol != "" && a.aiNoiseSourceName != "" {
+			if volErr := exec.Command("pactl", "set-source-volume", a.aiNoiseSourceName, curVol).Run(); volErr != nil {
+				logger.Warning("failed to restore physical mic volume:", volErr)
+			}
+		}
+	}
+
+	a.PropsMu.Lock()
+	a.setPropAiReduceNoise(enable)
+	a.PropsMu.Unlock()
+
+	// Persist DConfig best-effort; state already applied.
+	if err := a.audioDConfig.SetValue(dsgKeyAiReduceNoiseEnabled, enable); err != nil {
+		logger.Warning("failed to persist aiReduceNoiseEnabled to dconfig:", err)
+	}
+	return nil
+}
+
+// initAiReduceNoise initializes the AI noise reduction state after refresh().
+// Called from init() after refresh() populates a.sources and PA context is ready.
+// Combines DConfig check and source list detection in one place, so that
+// setAiReduceNoise(true) can properly save the physical mic name.
+func (a *Audio) initAiReduceNoise() {
+	logger.Debug("initAiReduceNoise")
+
+	// 1. Check if rnnoise source already exists in the source list.
+	a.mu.Lock()
+	rnnoiseFound := false
+	for _, src := range a.sources {
+		if src.Name == rnnoiseSourceName {
+			rnnoiseFound = true
+			break
+		}
+	}
+	a.mu.Unlock()
+
+	// 2. Check DConfig value.
+	aiReduceNoiseEnabled, err := a.audioDConfig.GetValueBool(dsgKeyAiReduceNoiseEnabled)
+	if err != nil {
+		logger.Warningf("initAiReduceNoise: DConfig GetValueBool failed: %v", err)
+	}
+
+	// 3. Decide: enable if either DConfig says so OR source already exists.
+	shouldEnable := aiReduceNoiseEnabled || rnnoiseFound
+	if !shouldEnable {
+		logger.Infof("initAiReduceNoise: DConfig=%v, rnnoiseFound=%v, nothing to do",
+			aiReduceNoiseEnabled, rnnoiseFound)
+		return
+	}
+
+	// 4. Refresh() may have already triggered updateDefaultSource, which
+	//    calls setPropAiReduceNoise(true) but does NOT save aiNoiseSourceName.
+	//    If so, save the physical mic name directly.
+	a.PropsMu.Lock()
+	if a.AiReduceNoise {
+		a.PropsMu.Unlock()
+		if a.aiNoiseSourceName == "" {
+			logger.Info("initAiReduceNoise: prop already true, saving physical mic name")
+			name := a.getDefaultSourceName()
+			if name == rnnoiseSourceName {
+				name = a.recoverPhysicalSourceName()
+			}
+			a.aiNoiseSourceName = name
+		}
+		return
+	}
+	a.PropsMu.Unlock()
+
+	logger.Infof("initAiReduceNoise: DConfig=%v, rnnoiseFound=%v, calling setAiReduceNoise(true)",
+		aiReduceNoiseEnabled, rnnoiseFound)
+	if err := a.setAiReduceNoise(true); err != nil {
+		logger.Warning("initAiReduceNoise: setAiReduceNoise(true) failed:", err)
+	}
 }

@@ -68,6 +68,10 @@ func (m *Module) start() error {
 		logger.Warning("failed to bind callback for ReduceNoise:", err)
 	}
 
+	err = so.SetWriteCallback(m.audio, "AiReduceNoise", m.audio.writeAiReduceNoise)
+	if err != nil {
+		logger.Warning("failed to bind callback for AiReduceNoise:", err)
+	}
 	err = so.SetWriteCallback(m.audio, "PausePlayer", m.audio.writeKeyPausePlayer)
 
 	if err != nil {

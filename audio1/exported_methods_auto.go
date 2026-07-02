@@ -28,16 +28,6 @@ func (v *Audio) GetExportedMethods() dbusutil.ExportedMethods {
 			InArgs: []string{"mode"},
 		},
 		{
-			Name:   "SetPort",
-			Fn:     v.SetPort,
-			InArgs: []string{"cardId", "portName", "direction"},
-		},
-		{
-			Name:   "SetPortEnabled",
-			Fn:     v.SetPortEnabled,
-			InArgs: []string{"cardId", "portName", "enabled"},
-		},
-		{
 			Name:   "SetCurrentAudioServer",
 			Fn:     v.SetCurrentAudioServer,
 			InArgs: []string{"serverName"},
@@ -46,6 +36,16 @@ func (v *Audio) GetExportedMethods() dbusutil.ExportedMethods {
 			Name:   "SetMono",
 			Fn:     v.SetMono,
 			InArgs: []string{"enable"},
+		},
+		{
+			Name:   "SetPort",
+			Fn:     v.SetPort,
+			InArgs: []string{"cardId", "portName", "direction"},
+		},
+		{
+			Name:   "SetPortEnabled",
+			Fn:     v.SetPortEnabled,
+			InArgs: []string{"cardId", "portName", "enabled"},
 		},
 		{
 			Name: "StopAudioService",
@@ -63,6 +63,10 @@ func (v *Meter) GetExportedMethods() dbusutil.ExportedMethods {
 }
 func (v *Sink) GetExportedMethods() dbusutil.ExportedMethods {
 	return dbusutil.ExportedMethods{
+		{
+			Name: "CheckPort",
+			Fn:   v.CheckPort,
+		},
 		{
 			Name:    "GetMeter",
 			Fn:      v.GetMeter,
@@ -121,6 +125,10 @@ func (v *SinkInput) GetExportedMethods() dbusutil.ExportedMethods {
 }
 func (v *Source) GetExportedMethods() dbusutil.ExportedMethods {
 	return dbusutil.ExportedMethods{
+		{
+			Name: "CheckPort",
+			Fn:   v.CheckPort,
+		},
 		{
 			Name:    "GetMeter",
 			Fn:      v.GetMeter,
