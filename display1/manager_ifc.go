@@ -235,7 +235,7 @@ func (m *Manager) SetAndSaveBrightness(outputName string, value float64) *dbus.E
 	}
 
 	err = m.saveBrightnessInCfg(map[string]float64{
-		outputName: value,
+		outputName: unscaleBrightness(value, m.getBrightnessScale()),
 	})
 	if err != nil {
 		logger.Warning(err)
@@ -474,7 +474,9 @@ func (m *Manager) GetRealDisplayMode() (uint8, *dbus.Error) {
 }
 
 func (m *Manager) SupportSetColorTemperature() (bool, *dbus.Error) {
-	return !(m.isVM || !m.drmSupportGamma), nil
+	m.PropsMu.RLock()
+	defer m.PropsMu.RUnlock()
+	return m.SupportColorTemperature, nil
 }
 
 func (m *Manager) SetCustomColorTempTimePeriod(timePeriod string) *dbus.Error {
