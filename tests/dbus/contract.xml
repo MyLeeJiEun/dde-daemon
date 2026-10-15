@@ -1,0 +1,83 @@
+<node>
+  <object path="/org/deepin/dde/Daemon1">
+    <interface name="org.deepin.dde.Daemon1">
+      <method name="CallTrace">
+        <arg name="times" type="u" direction="in"/>
+        <arg name="seconds" type="u" direction="in"/>
+      </method>
+      <method name="StartPart2"/>
+    </interface>
+  </object>
+  <object path="/org/deepin/dde/Format1">
+    <interface name="org.deepin.dde.Format1">
+      <property name="CurrencySymbol" type="s" access="readwrite"/>
+      <property name="DecimalSymbol" type="s" access="readwrite"/>
+      <property name="DigitGrouping" type="s" access="readwrite"/>
+      <property name="DigitGroupingSymbol" type="s" access="readwrite"/>
+      <property name="NegativeCurrencyFormat" type="s" access="readwrite"/>
+      <property name="PositiveCurrencyFormat" type="s" access="readwrite"/>
+    </interface>
+  </object>
+  <object path="/org/deepin/dde/Timedate1">
+    <interface name="org.deepin.dde.Timedate1">
+      <method name="AddUserTimezone">
+        <arg name="zone" type="s" direction="in"/>
+      </method>
+      <method name="DeleteUserTimezone">
+        <arg name="zone" type="s" direction="in"/>
+      </method>
+      <method name="GetSampleNTPServers">
+        <arg name="servers" type="as" direction="out"/>
+      </method>
+      <method name="GetZoneInfo">
+        <arg name="zone" type="s" direction="in"/>
+        <arg name="zoneInfo" type="(ssi(xxi))" direction="out"/>
+      </method>
+      <method name="GetZoneList">
+        <arg name="zoneList" type="as" direction="out"/>
+      </method>
+      <method name="Reset"/>
+      <method name="SetDate">
+        <arg name="year" type="i" direction="in"/>
+        <arg name="month" type="i" direction="in"/>
+        <arg name="day" type="i" direction="in"/>
+        <arg name="hour" type="i" direction="in"/>
+        <arg name="min" type="i" direction="in"/>
+        <arg name="sec" type="i" direction="in"/>
+        <arg name="nsec" type="i" direction="in"/>
+      </method>
+      <method name="SetLocalRTC">
+        <arg name="localRTC" type="b" direction="in"/>
+        <arg name="fixSystem" type="b" direction="in"/>
+      </method>
+      <method name="SetNTP">
+        <arg name="useNTP" type="b" direction="in"/>
+      </method>
+      <method name="SetNTPServer">
+        <arg name="server" type="s" direction="in"/>
+      </method>
+      <method name="SetTime">
+        <arg name="usec" type="x" direction="in"/>
+        <arg name="relative" type="b" direction="in"/>
+      </method>
+      <method name="SetTimezone">
+        <arg name="zone" type="s" direction="in"/>
+      </method>
+      <signal name="TimeUpdate"/>
+      <property name="CanNTP" type="b" access="read"/>
+      <property name="DSTOffset" type="i" access="readwrite"/>
+      <property name="LocalRTC" type="b" access="read"/>
+      <property name="LongDateFormat" type="i" access="readwrite"/>
+      <property name="LongTimeFormat" type="i" access="readwrite"/>
+      <property name="NTP" type="b" access="read"/>
+      <property name="NTPServer" type="s" access="readwrite"/>
+      <property name="ShortDateFormat" type="i" access="readwrite"/>
+      <property name="ShortTimeFormat" type="i" access="readwrite"/>
+      <property name="Timezone" type="s" access="readwrite"/>
+      <property name="Use24HourFormat" type="b" access="readwrite"/>
+      <property name="UserTimezones" type="as" access="read"/>
+      <property name="WeekBegins" type="i" access="readwrite"/>
+      <property name="WeekdayFormat" type="i" access="readwrite"/>
+    </interface>
+  </object>
+</node>
