@@ -1,0 +1,68 @@
+# dde-daemon timedate 模块的 DBus 接口测试配置
+# (由 `dbus-testing init --binary <daemon> -- --enable timedate` 生成后人工审)。
+#
+# 形态:go-loader —— timedate 不是独立二进制,是 dde-session-daemon 的一个模块,
+# 框架把 argv 组装为 `<daemon> --enable timedate -i`。
+# 该进程同时注册 Daemon1 / Format1 / Timedate1 三个服务名,ready 要求三者全部就绪;
+# 因此用例里非默认路径/接口的成员都显式写了 object: 与 interface:。
+#
+# 跑法:
+#   dbus-testing run tests/dbus --build-dir <构建目录>     # 有构建产物时
+#   dbus-testing run tests/dbus                            # 用系统安装路径兜底
+apiVersion: v1
+process: dde-session-daemon
+mode: isolate
+kind: go-loader
+
+services:
+  - org.deepin.dde.Daemon1
+  - org.deepin.dde.Format1
+  - org.deepin.dde.Timedate1
+
+binary:
+  search:
+    - ${BUILD_DIR}/dde-session-daemon
+    - ${BUILD_DIR}/bin/dde-session-daemon
+    - /usr/libexec/deepin/dde-session-daemon
+
+module: timedate
+
+sandbox:
+  home: tmp
+
+# 外部依赖前置 mock(必须在被测进程启动前就绪):
+# - dconfig: initDsgConfig()(bin/dde-session-daemon/daemon.go)与 loader 的
+#   setupDSGLogLeveL 都在 system 总线调 org.desktopspec.ConfigManager;
+#   前者拿不到 acquireManager 时 NewSessionDaemon 返回 nil 直接退出,
+#   后者对 value() 结果直接断言类型(go: v.Value().(bool)),mock 返回
+#   类型不符会 panic(interface conversion)——所以用 values 显式给
+#   logger 的 enabled 一个 bool(模板按编码还原类型,见 dconfig.py)
+# - systemd: proxy.go 清理 dbus/systemd 激活环境变量时调 org.freedesktop.systemd1
+needs:
+  - mock: dconfig
+    bus: system
+    params:
+      values:
+        enabled: "b:false"
+  - mock: systemd
+    bus: system
+
+ready:
+  name-owner:
+    - org.deepin.dde.Daemon1
+    - org.deepin.dde.Format1
+    - org.deepin.dde.Timedate1
+  timeout: 10s
+
+# attach 模式安全默认:只读。需要调用方法时在这里显式放行。
+allow:
+  methods: []
+
+ignore:
+  interfaces:
+    - "org.freedesktop.DBus.*"
+
+teardown: kill
+
+# init 探测记录:
+#   - 探测参数里含 --enable timedate,已按 loader 模块形态生成 kind: go-loader + module(argv 由框架组装为 `<binary> --enable timedate -i`)

@@ -1,0 +1,223 @@
+# 由 `dbus-testing init` 生成的用例草稿。
+# 未注释的用例可直接运行;注释态用例请补齐参数/触发方法后取消注释。
+apiVersion: v1
+cases:
+  # ---- org.deepin.dde.Daemon1 @ /org/deepin/dde/Daemon1 ----
+  # - name: call-trace-smoke   # 入参签名: uu
+  #   call: {method: CallTrace, args: [0, 0]}
+  #   expect: {error: null}
+  #   # 补真实参数后取消注释;或改为错误路径 expect: {error: "*"}
+  # - name: start-part2-smoke   # 入参签名: (无)
+  #   call: {method: StartPart2, args: []}
+  #   expect: {error: null}
+  #   # 补真实参数后取消注释;或改为错误路径 expect: {error: "*"}
+
+  # ---- org.deepin.dde.Format1 @ /org/deepin/dde/Format1 ----
+  - name: currency-symbol-readable
+    get-prop: {object: /org/deepin/dde/Format1, interface: org.deepin.dde.Format1, property: CurrencySymbol}
+    expect: {type: "s"}
+  # - name: currency-symbol-roundtrip   # 可写属性:读-写-读回
+  #   steps:
+  #     - get-prop: {object: /org/deepin/dde/Format1, interface: org.deepin.dde.Format1, property: CurrencySymbol}
+  #     - set-prop: {object: /org/deepin/dde/Format1, interface: org.deepin.dde.Format1, property: CurrencySymbol, value: ""}
+  #       expect: {error: null}
+  - name: decimal-symbol-readable
+    get-prop: {object: /org/deepin/dde/Format1, interface: org.deepin.dde.Format1, property: DecimalSymbol}
+    expect: {type: "s"}
+  # - name: decimal-symbol-roundtrip   # 可写属性:读-写-读回
+  #   steps:
+  #     - get-prop: {object: /org/deepin/dde/Format1, interface: org.deepin.dde.Format1, property: DecimalSymbol}
+  #     - set-prop: {object: /org/deepin/dde/Format1, interface: org.deepin.dde.Format1, property: DecimalSymbol, value: ""}
+  #       expect: {error: null}
+  - name: digit-grouping-readable
+    get-prop: {object: /org/deepin/dde/Format1, interface: org.deepin.dde.Format1, property: DigitGrouping}
+    expect: {type: "s"}
+  # - name: digit-grouping-roundtrip   # 可写属性:读-写-读回
+  #   steps:
+  #     - get-prop: {object: /org/deepin/dde/Format1, interface: org.deepin.dde.Format1, property: DigitGrouping}
+  #     - set-prop: {object: /org/deepin/dde/Format1, interface: org.deepin.dde.Format1, property: DigitGrouping, value: ""}
+  #       expect: {error: null}
+  - name: digit-grouping-symbol-readable
+    get-prop: {object: /org/deepin/dde/Format1, interface: org.deepin.dde.Format1, property: DigitGroupingSymbol}
+    expect: {type: "s"}
+  # - name: digit-grouping-symbol-roundtrip   # 可写属性:读-写-读回
+  #   steps:
+  #     - get-prop: {object: /org/deepin/dde/Format1, interface: org.deepin.dde.Format1, property: DigitGroupingSymbol}
+  #     - set-prop: {object: /org/deepin/dde/Format1, interface: org.deepin.dde.Format1, property: DigitGroupingSymbol, value: ""}
+  #       expect: {error: null}
+  - name: negative-currency-format-readable
+    get-prop: {object: /org/deepin/dde/Format1, interface: org.deepin.dde.Format1, property: NegativeCurrencyFormat}
+    expect: {type: "s"}
+  # - name: negative-currency-format-roundtrip   # 可写属性:读-写-读回
+  #   steps:
+  #     - get-prop: {object: /org/deepin/dde/Format1, interface: org.deepin.dde.Format1, property: NegativeCurrencyFormat}
+  #     - set-prop: {object: /org/deepin/dde/Format1, interface: org.deepin.dde.Format1, property: NegativeCurrencyFormat, value: ""}
+  #       expect: {error: null}
+  - name: positive-currency-format-readable
+    get-prop: {object: /org/deepin/dde/Format1, interface: org.deepin.dde.Format1, property: PositiveCurrencyFormat}
+    expect: {type: "s"}
+  # - name: positive-currency-format-roundtrip   # 可写属性:读-写-读回
+  #   steps:
+  #     - get-prop: {object: /org/deepin/dde/Format1, interface: org.deepin.dde.Format1, property: PositiveCurrencyFormat}
+  #     - set-prop: {object: /org/deepin/dde/Format1, interface: org.deepin.dde.Format1, property: PositiveCurrencyFormat, value: ""}
+  #       expect: {error: null}
+
+  # ---- org.deepin.dde.Timedate1 @ /org/deepin/dde/Timedate1 ----
+  # - name: add-user-timezone-smoke   # 入参签名: s
+  #   call: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, method: AddUserTimezone, args: [""]}
+  #   expect: {error: null}
+  #   # 补真实参数后取消注释;或改为错误路径 expect: {error: "*"}
+  - name: can-ntp-readable
+    get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: CanNTP}
+    expect: {type: "b"}
+  - name: can-ntp-readonly
+    set-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: CanNTP, value: false}
+    expect: {error: "*"}   # 建议收紧为实际错误名
+  - name: dst-offset-readable
+    get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: DSTOffset}
+    expect: {type: "i"}
+  # - name: dst-offset-roundtrip   # 可写属性:读-写-读回
+  #   steps:
+  #     - get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: DSTOffset}
+  #     - set-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: DSTOffset, value: 0}
+  #       expect: {error: null}
+  # - name: delete-user-timezone-smoke   # 入参签名: s
+  #   call: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, method: DeleteUserTimezone, args: [""]}
+  #   expect: {error: null}
+  #   # 补真实参数后取消注释;或改为错误路径 expect: {error: "*"}
+  - name: get-sample-ntp-servers-signature
+    call: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, method: GetSampleNTPServers}
+    expect: {signature: "as"}
+  # - name: get-zone-info-smoke   # 入参签名: s
+  #   call: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, method: GetZoneInfo, args: [""]}
+  #   expect: {signature: "(ssi(xxi))"}
+  #   # 补真实参数后取消注释;或改为错误路径 expect: {error: "*"}
+  - name: get-zone-list-signature
+    call: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, method: GetZoneList}
+    expect: {signature: "as"}
+  - name: local-rtc-readable
+    get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: LocalRTC}
+    expect: {type: "b"}
+  - name: local-rtc-readonly
+    set-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: LocalRTC, value: false}
+    expect: {error: "*"}   # 建议收紧为实际错误名
+  - name: long-date-format-readable
+    get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: LongDateFormat}
+    expect: {type: "i"}
+  # - name: long-date-format-roundtrip   # 可写属性:读-写-读回
+  #   steps:
+  #     - get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: LongDateFormat}
+  #     - set-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: LongDateFormat, value: 0}
+  #       expect: {error: null}
+  - name: long-time-format-readable
+    get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: LongTimeFormat}
+    expect: {type: "i"}
+  # - name: long-time-format-roundtrip   # 可写属性:读-写-读回
+  #   steps:
+  #     - get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: LongTimeFormat}
+  #     - set-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: LongTimeFormat, value: 0}
+  #       expect: {error: null}
+  - name: ntp-readable
+    get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: NTP}
+    expect: {type: "b"}
+  - name: ntp-readonly
+    set-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: NTP, value: false}
+    expect: {error: "*"}   # 建议收紧为实际错误名
+  - name: ntp-server-readable
+    get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: NTPServer}
+    expect: {type: "s"}
+  # - name: ntp-server-roundtrip   # 可写属性:读-写-读回
+  #   steps:
+  #     - get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: NTPServer}
+  #     - set-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: NTPServer, value: ""}
+  #       expect: {error: null}
+  # - name: reset-smoke   # 入参签名: (无)
+  #   call: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, method: Reset, args: []}
+  #   expect: {error: null}
+  #   # 补真实参数后取消注释;或改为错误路径 expect: {error: "*"}
+  # - name: set-date-smoke   # 入参签名: iiiiiii
+  #   call: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, method: SetDate, args: [0, 0, 0, 0, 0, 0, 0]}
+  #   expect: {error: null}
+  #   # 补真实参数后取消注释;或改为错误路径 expect: {error: "*"}
+  # - name: set-local-rtc-smoke   # 入参签名: bb
+  #   call: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, method: SetLocalRTC, args: [false, false]}
+  #   expect: {error: null}
+  #   # 补真实参数后取消注释;或改为错误路径 expect: {error: "*"}
+  # - name: set-ntp-smoke   # 入参签名: b
+  #   call: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, method: SetNTP, args: [false]}
+  #   expect: {error: null}
+  #   # 补真实参数后取消注释;或改为错误路径 expect: {error: "*"}
+  # - name: set-ntp-server-smoke   # 入参签名: s
+  #   call: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, method: SetNTPServer, args: [""]}
+  #   expect: {error: null}
+  #   # 补真实参数后取消注释;或改为错误路径 expect: {error: "*"}
+  # - name: set-time-smoke   # 入参签名: xb
+  #   call: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, method: SetTime, args: [0, false]}
+  #   expect: {error: null}
+  #   # 补真实参数后取消注释;或改为错误路径 expect: {error: "*"}
+  # - name: set-timezone-smoke   # 入参签名: s
+  #   call: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, method: SetTimezone, args: [""]}
+  #   expect: {error: null}
+  #   # 补真实参数后取消注释;或改为错误路径 expect: {error: "*"}
+  - name: short-date-format-readable
+    get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: ShortDateFormat}
+    expect: {type: "i"}
+  # - name: short-date-format-roundtrip   # 可写属性:读-写-读回
+  #   steps:
+  #     - get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: ShortDateFormat}
+  #     - set-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: ShortDateFormat, value: 0}
+  #       expect: {error: null}
+  - name: short-time-format-readable
+    get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: ShortTimeFormat}
+    expect: {type: "i"}
+  # - name: short-time-format-roundtrip   # 可写属性:读-写-读回
+  #   steps:
+  #     - get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: ShortTimeFormat}
+  #     - set-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: ShortTimeFormat, value: 0}
+  #       expect: {error: null}
+  # - name: time-update-emitted   # 信号载荷签名: (无)
+  #   steps:
+  #     - call: {method: 触发该信号的方法}
+  #     - wait-signal: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, name: TimeUpdate, timeout: 5s}
+  - name: timezone-readable
+    get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: Timezone}
+    expect: {type: "s"}
+  # - name: timezone-roundtrip   # 可写属性:读-写-读回
+  #   steps:
+  #     - get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: Timezone}
+  #     - set-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: Timezone, value: ""}
+  #       expect: {error: null}
+  - name: use24-hour-format-readable
+    get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: Use24HourFormat}
+    expect: {type: "b"}
+  # - name: use24-hour-format-roundtrip   # 可写属性:读-写-读回
+  #   steps:
+  #     - get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: Use24HourFormat}
+  #     - set-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: Use24HourFormat, value: false}
+  #       expect: {error: null}
+  - name: user-timezones-readable
+    get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: UserTimezones}
+    expect: {type: "as"}
+  - name: user-timezones-readonly
+    set-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: UserTimezones, value: []}
+    expect: {error: "*"}   # 建议收紧为实际错误名
+  - name: week-begins-readable
+    get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: WeekBegins}
+    expect: {type: "i"}
+  # - name: week-begins-roundtrip   # 可写属性:读-写-读回
+  #   steps:
+  #     - get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: WeekBegins}
+  #     - set-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: WeekBegins, value: 0}
+  #       expect: {error: null}
+  - name: weekday-format-readable
+    get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: WeekdayFormat}
+    expect: {type: "i"}
+  # - name: weekday-format-roundtrip   # 可写属性:读-写-读回
+  #   steps:
+  #     - get-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: WeekdayFormat}
+  #     - set-prop: {object: /org/deepin/dde/Timedate1, interface: org.deepin.dde.Timedate1, property: WeekdayFormat, value: 0}
+  #       expect: {error: null}
+
+  # 契约漂移检查:运行时接口必须与 contract.xml 一致
+  - name: contract
+    check-contract: true
